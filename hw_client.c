@@ -3,11 +3,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "hw.h"
 
 #define BUFLEN 200
 #define TWO_WORD 0
 #define ONE_WORD 1
+
+void uppercase(char *ptr, int len) {
+  while (*ptr != '\0' && len > 0) {
+    *ptr = toupper((unsigned char) *ptr);
+    ++ptr;
+    --len;
+  }
+}
 
 void print_classes() {
   t_classes *classes = get_classes();
@@ -63,7 +72,8 @@ int do_add(char *buf) {
       class_id = class_lookup(class_name);
       if (class_id < 0) {
         fprintf(stderr, "No such class: %s\n", class_name);
-        return -1;
+        ret = 1;
+        break;
       }
       add_hw(class_id, assignment, due_month, due_day, due_hour, due_min);
       break;
@@ -72,11 +82,46 @@ int do_add(char *buf) {
   }
   free(assignment);
   free(class_name);
+  return ret;
+}
+
+int do_get(char *buf) {
+  int class_id;
+  class_id = class_lookup(buf);
+  if (class_id < 0) {
+    fprintf(stderr, "No such class: %s\n", buf);
+    return 1;
+  }
+  get_assignments(class_id, &print_vals);
   return 0;
+}
+
+int do_mark_completed(char *buf) {
+  char *assignment = malloc(BUFLEN * sizeof(char));
+  char *class_name = malloc(BUFLEN * sizeof(char));
+  int ret, class_id;
+  ret = sscanf(buf, "%s %s", class_name, assignment);
+  if (ret != 2) {
+    fprintf(stderr, "Invalid argument %s\n", buf);
+    ret = 1;
+  } else {
+    class_id = class_lookup(class_name);
+    if (class_id < 0) {
+      fprintf(stderr, "No such class: %s\n", class_name);
+      ret = 1;
+    } else {
+      mark_completed(class_id, assignment);
+    }
+    free(assignment);
+    free(class_name);
+  }
+  return ret;
 }
 
 
 int eval(char *buf1, char *buf2, char flag) {
+  int tmp;
+  uppercase(buf2, BUFLEN);
   printf("%s\n", buf1);
   if (flag != 1) {
     printf("%s\n", buf2);
@@ -85,15 +130,40 @@ int eval(char *buf1, char *buf2, char flag) {
     return -1;
   } else if (strcmp(buf1, "add") == 0) {
     if (flag == ONE_WORD) {
+      fprintf(stderr, "Missing argument\n");
       return 1;
     }
-    do_add(buf2);
-    return 0;
+    return do_add(buf2);
   } else if (strcmp(buf1, "clear") == 0) {
     clear();
     return 0;
   } else if (strcmp(buf1, "list") == 0) {
-    find_hw(7, &print_vals);
+    if (flag == ONE_WORD) {
+      find_hw(7, &print_vals);
+    } else {
+      tmp = atoi(buf2);
+      if (tmp > 0) {
+        find_hw(tmp, &print_vals);
+      } else {
+        fprintf(stderr, "Invalid argument %s\n", buf2);
+        return 1;
+      }
+    }
+    return 0;
+  } else if (strcmp(buf1, "mark") == 0) {
+    if (flag == ONE_WORD) {
+      fprintf(stderr, "Missing argument\n");
+      return 1;
+    }
+    return do_mark_completed(buf2);
+  } else if (strcmp(buf1, "get") == 0) {
+    if (flag == ONE_WORD) {
+      fprintf(stderr, "Missing argument\n");
+      return 1;
+    }
+    return do_get(buf2);
+  } else if (strcmp(buf1, "cleanup") == 0) {
+    cleanup();
     return 0;
   } else {
     fprintf(stderr, "Unknown command %s\n", buf1);
@@ -130,9 +200,10 @@ void repl() {
 }
 
 int main(int argc, char *argv[]) {
-  repl();
-  exit(0);
   initialize();
+  repl();
+  finish();
+  exit(0);
   print_classes();
   add_hw(0, "HW1", 9, 4, 9, 0);
   mark_completed(0, "HW1");
