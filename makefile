@@ -1,7 +1,7 @@
 all: hw
 
-hw: hw.c
-	gcc -Wall -o hw -l sqlite3 hw.c hw_client.c
+hw: hw.c hw_client.c
+	gcc -Wall -o hw-track -l sqlite3 hw.c hw_client.c
 
 clean:
-	rm -rf hw hw_client hw.db
+	rm -rf hw-track hw_client hw.db

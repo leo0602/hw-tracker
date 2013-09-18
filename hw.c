@@ -70,7 +70,10 @@ void initialize() {
 }
 
 void finish() {
+  cleanup();
   sqlite3_close(db);
+  free(sql_cmd);
+  free(all_classes.classes);
 }
 
 void add_hw(int class_id, char *assignment, int due_month, int due_day, int due_hour, int due_min) {
@@ -82,6 +85,7 @@ void add_hw(int class_id, char *assignment, int due_month, int due_day, int due_
   char *date = malloc(DATE_LEN * sizeof(char));
   sprintf(date, "2013-%02d-%02d %02d:%02d:00", due_month, due_day, due_hour, due_min);
   sprintf(sql_cmd, "INSERT INTO HW VALUES (%d, '%s', '%s', '%s', 0)", class_id, class, assignment, date);
+  free(date);
   do_sql(sql_cmd, NULL);
 }
 
@@ -128,6 +132,10 @@ void cleanup() {
   do_sql("DELETE FROM HW WHERE ROWID NOT IN ("\
          "SELECT MIN(ROWID) FROM HW "\
          "GROUP BY CLASS_ID, CLASS, ASSIGNMENT, DUE, COMPLETED);", NULL);
+}
+
+void clear() {
+  do_sql("DELETE FROM HW", NULL);
 }
 
 t_classes *get_classes() {

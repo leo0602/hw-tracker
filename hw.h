@@ -13,4 +13,5 @@ struct t_classes *get_classes();
 void mark_completed(int class_id, char *assignment);
 void add_class(char *name);
 void cleanup();
+void clear();
 #endif
